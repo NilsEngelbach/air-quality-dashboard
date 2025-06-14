@@ -45,4 +45,5 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
-/src/environments/
+/src/environments/*
+!/src/environments/.gitkeep 
