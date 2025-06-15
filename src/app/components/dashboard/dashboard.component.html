@@ -2,9 +2,12 @@
   <mat-sidenav #drawer class="sidenav" fixedInViewport mode="side" opened>
     <mat-toolbar>Rooms</mat-toolbar>
     <mat-nav-list>
-      <a mat-list-item *ngFor="let room of rooms" 
-         (click)="selectRoom(room)"
-         [class.active]="selectedRoom?.id === room.id">
+      <a
+        mat-list-item
+        *ngFor="let room of rooms"
+        (click)="selectRoom(room)"
+        [class.active]="selectedRoom?.id === room.id"
+      >
         {{ room.name }}
       </a>
     </mat-nav-list>
@@ -25,7 +28,10 @@
     <div class="content-container" *ngIf="selectedRoom">
       <mat-form-field appearance="outline" class="sensor-select">
         <mat-label>Select Sensor</mat-label>
-        <mat-select [(value)]="selectedSensor" (selectionChange)="onSensorChange()">
+        <mat-select
+          [(value)]="selectedSensor"
+          (selectionChange)="onSensorChange()"
+        >
           <mat-option *ngFor="let sensor of sensors" [value]="sensor">
             {{ sensor.name }}
           </mat-option>
@@ -36,42 +42,54 @@
         <mat-card class="metric-card">
           <mat-card-title>Temperature</mat-card-title>
           <mat-card-content>
-            <div class="metric-value">{{ latestData?.temperature | number:'1.1-1' }}°C</div>
+            <div class="metric-value">
+              {{ latestData?.temperature | number: "1.1-1" }}°C
+            </div>
           </mat-card-content>
         </mat-card>
 
         <mat-card class="metric-card">
           <mat-card-title>Humidity</mat-card-title>
           <mat-card-content>
-            <div class="metric-value">{{ latestData?.humidity | number:'1.1-1' }}%</div>
+            <div class="metric-value">
+              {{ latestData?.humidity | number: "1.1-1" }}%
+            </div>
           </mat-card-content>
         </mat-card>
 
         <mat-card class="metric-card">
           <mat-card-title>Pressure</mat-card-title>
           <mat-card-content>
-            <div class="metric-value">{{ latestData?.pressure | number:'1.0-0' }} hPa</div>
+            <div class="metric-value">
+              {{ latestData?.pressure | number: "1.0-0" }} hPa
+            </div>
           </mat-card-content>
         </mat-card>
 
         <mat-card class="metric-card">
           <mat-card-title>CO2</mat-card-title>
           <mat-card-content>
-            <div class="metric-value">{{ latestData?.co2 | number:'1.0-0' }} ppm</div>
+            <div class="metric-value">
+              {{ latestData?.co2 | number: "1.0-0" }} ppm
+            </div>
           </mat-card-content>
         </mat-card>
 
         <mat-card class="metric-card">
           <mat-card-title>VOC</mat-card-title>
           <mat-card-content>
-            <div class="metric-value">{{ latestData?.voc | number:'1.0-0' }} ppb</div>
+            <div class="metric-value">
+              {{ latestData?.voc | number: "1.0-0" }} ppb
+            </div>
           </mat-card-content>
         </mat-card>
 
         <mat-card class="metric-card">
           <mat-card-title>IAQ</mat-card-title>
           <mat-card-content>
-            <div class="metric-value">{{ latestData?.iaq | number:'1.0-0' }}</div>
+            <div class="metric-value">
+              {{ latestData?.iaq | number: "1.0-0" }}
+            </div>
           </mat-card-content>
         </mat-card>
       </div>
@@ -85,4 +103,4 @@
       <p>Select a room to view sensor data</p>
     </div>
   </mat-sidenav-content>
-</mat-sidenav-container> 
+</mat-sidenav-container>

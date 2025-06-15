@@ -1,7 +1,12 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { SupabaseService, Room, Sensor, AirQualityData } from '../../services/supabase.service';
+import {
+  SupabaseService,
+  Room,
+  Sensor,
+  AirQualityData,
+} from '../../services/supabase.service';
 import { Chart, ChartConfiguration } from 'chart.js';
 import { registerables } from 'chart.js';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -12,6 +17,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Subscription } from 'rxjs';
 
 Chart.register(...registerables);
 
@@ -29,21 +35,20 @@ Chart.register(...registerables);
     MatCardModule,
     MatSelectModule,
     MatIconModule,
-    MatProgressSpinnerModule
-  ]
+    MatProgressSpinnerModule,
+  ],
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
+  private supabaseService = inject(SupabaseService);
+  private router = inject(Router);
+
   rooms: Room[] = [];
   sensors: Sensor[] = [];
   selectedRoom: Room | null = null;
   selectedSensor: Sensor | null = null;
   latestData: AirQualityData | null = null;
   private chart: Chart | null = null;
-
-  constructor(
-    private supabaseService: SupabaseService,
-    private router: Router
-  ) {}
+  private updateSubscription: Subscription | null = null;
 
   async ngOnInit() {
     await this.loadRooms();
@@ -78,12 +83,59 @@ export class DashboardComponent implements OnInit {
   async onSensorChange() {
     if (!this.selectedSensor) return;
 
+    if (this.updateSubscription) {
+      this.updateSubscription.unsubscribe();
+      this.updateSubscription = null;
+    }
+
     try {
-      const data = await this.supabaseService.getAirQualityData(this.selectedSensor.id);
+      const data = await this.supabaseService.getAirQualityData(
+        this.selectedSensor.id,
+      );
+
       if (data.length > 0) {
         this.latestData = data[0];
         this.updateChart(data);
       }
+
+      this.updateSubscription = this.supabaseService
+        .subscribeToAirQualityUpdates(this.selectedSensor.id)
+        .subscribe((newData) => {
+          console.log('Received new air quality data:', newData);
+          this.latestData = newData;
+
+          if (this.chart) {
+            const chartData = this.chart.data;
+            const labels = chartData.labels as string[];
+            const datasets = chartData.datasets;
+
+            labels.push(
+              new Date(newData.timestamp_received).toLocaleTimeString(),
+            );
+            datasets.forEach((dataset) => {
+              const data = dataset.data as number[];
+              switch (dataset.label) {
+                case 'Temperature (°C)':
+                  data.push(newData.temperature);
+                  break;
+                case 'Humidity (%)':
+                  data.push(newData.humidity);
+                  break;
+                default:
+                  break;
+              }
+            });
+
+            if (labels.length > 20) {
+              labels.shift();
+              datasets.forEach((dataset) => {
+                (dataset.data as number[]).shift();
+              });
+            }
+
+            this.chart.update();
+          }
+        });
     } catch (error) {
       console.error('Error loading sensor data:', error);
     }
@@ -93,9 +145,11 @@ export class DashboardComponent implements OnInit {
     const ctx = document.querySelector('canvas')?.getContext('2d');
     if (!ctx) return;
 
-    const timestamps = data.map(d => new Date(d.timestamp).toLocaleTimeString()).reverse();
-    const temperatures = data.map(d => d.temperature).reverse();
-    const humidities = data.map(d => d.humidity).reverse();
+    const timestamps = data
+      .map((d) => new Date(d.timestamp_received).toLocaleTimeString())
+      .reverse();
+    const temperatures = data.map((d) => d.temperature).reverse();
+    const humidities = data.map((d) => d.humidity).reverse();
 
     if (this.chart) {
       this.chart.destroy();
@@ -110,25 +164,25 @@ export class DashboardComponent implements OnInit {
             label: 'Temperature (°C)',
             data: temperatures,
             borderColor: 'rgb(255, 99, 132)',
-            tension: 0.1
+            tension: 0.1,
           },
           {
             label: 'Humidity (%)',
             data: humidities,
             borderColor: 'rgb(54, 162, 235)',
-            tension: 0.1
-          }
-        ]
+            tension: 0.1,
+          },
+        ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         scales: {
           y: {
-            beginAtZero: false
-          }
-        }
-      }
+            beginAtZero: false,
+          },
+        },
+      },
     };
 
     this.chart = new Chart(ctx, config);
@@ -142,4 +196,11 @@ export class DashboardComponent implements OnInit {
       console.error('Error signing out:', error);
     }
   }
-} 
+
+  ngOnDestroy() {
+    if (this.updateSubscription) {
+      this.updateSubscription.unsubscribe();
+    }
+    this.supabaseService.unsubscribeFromAirQualityUpdates();
+  }
+}

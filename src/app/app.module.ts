@@ -39,15 +39,15 @@ import { AuthGuard } from './guards/auth.guard';
     DashboardComponent,
     RouterModule.forRoot([
       { path: 'login', component: LoginComponent },
-      { 
-        path: 'dashboard', 
+      {
+        path: 'dashboard',
         component: DashboardComponent,
-        canActivate: [AuthGuard]
+        canActivate: [AuthGuard],
       },
-      { path: '', redirectTo: '/dashboard', pathMatch: 'full' }
-    ])
+      { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
+    ]),
   ],
   providers: [],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent],
 })
-export class AppModule { } 
+export class AppModule {}

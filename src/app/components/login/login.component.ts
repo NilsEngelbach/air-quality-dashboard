@@ -1,6 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
@@ -22,36 +27,38 @@ import { filter, take } from 'rxjs/operators';
     MatInputModule,
     MatButtonModule,
     MatFormFieldModule,
-    MatProgressSpinnerModule
-  ]
+    MatProgressSpinnerModule,
+  ],
 })
 export class LoginComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  private supabaseService = inject(SupabaseService);
+  private router = inject(Router);
+
   loginForm: FormGroup;
   loading = false;
   errorMessage = '';
 
-  constructor(
-    private fb: FormBuilder,
-    private supabaseService: SupabaseService,
-    private router: Router
-  ) {
+  constructor() {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
     });
   }
 
   ngOnInit() {
     // Check if user is already logged in
-    this.supabaseService.currentUser$.pipe(
-      filter(user => user !== undefined),
-      take(1)
-    ).subscribe(user => {
-      if (user) {
-        console.log('User already logged in, redirecting to dashboard...');
-        this.router.navigate(['/dashboard']);
-      }
-    });
+    this.supabaseService.currentUser$
+      .pipe(
+        filter((user) => user !== undefined),
+        take(1),
+      )
+      .subscribe((user) => {
+        if (user) {
+          console.log('User already logged in, redirecting to dashboard...');
+          this.router.navigate(['/dashboard']);
+        }
+      });
   }
 
   async onSubmit() {
@@ -67,7 +74,7 @@ export class LoginComponent implements OnInit {
     try {
       const { error } = await this.supabaseService.signIn(email, password);
       if (error) throw error;
-      
+
       console.log('Login successful, redirecting to dashboard...');
       this.router.navigate(['/dashboard']);
     } catch (error: any) {
@@ -77,4 +84,4 @@ export class LoginComponent implements OnInit {
       this.loading = false;
     }
   }
-} 
+}

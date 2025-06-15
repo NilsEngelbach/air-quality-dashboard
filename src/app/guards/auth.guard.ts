@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Router, CanActivate } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map, take, tap, filter } from 'rxjs/operators';
@@ -6,20 +6,18 @@ import { SupabaseService } from '../services/supabase.service';
 import { User } from '@supabase/supabase-js';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthGuard implements CanActivate {
-  constructor(
-    private supabaseService: SupabaseService,
-    private router: Router
-  ) {}
+  private supabaseService = inject(SupabaseService);
+  private router = inject(Router);
 
   canActivate(): Observable<boolean> {
     return this.supabaseService.currentUser$.pipe(
       // Wait until we have a definitive answer (not undefined)
       filter((user): user is User | null => user !== undefined),
       take(1),
-      tap(user => {
+      tap((user) => {
         if (!user) {
           console.log('No authenticated user found, redirecting to login...');
           this.router.navigate(['/login']);
@@ -27,7 +25,7 @@ export class AuthGuard implements CanActivate {
           console.log('User authenticated:', user.email);
         }
       }),
-      map(user => !!user)
+      map((user) => !!user),
     );
   }
-} 
+}
