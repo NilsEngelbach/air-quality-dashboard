@@ -1,0 +1,103 @@
+:host {
+  display: block;
+}
+
+.history-card {
+  mat-card-content {
+    padding-top: 8px;
+  }
+}
+
+.history-header {
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 0;
+
+  mat-card-title {
+    margin: 0;
+  }
+}
+
+.range-selector {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 80vh;
+  min-height: 700px;
+  max-height: 1000px;
+}
+
+.chart-plot {
+  position: absolute;
+  inset: 0;
+}
+
+.chart-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.crosshair {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: #999;
+}
+
+.hover-values {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  min-width: 140px;
+  padding: 8px;
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.hover-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.metric-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hover-label {
+  color: #666;
+}
+
+.hover-value-text {
+  font-weight: 500;
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+@media (max-width: 600px) {
+  .history-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chart-wrapper {
+    min-height: 500px;
+  }
+}

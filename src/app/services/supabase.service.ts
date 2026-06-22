@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import {
   createClient,
-  SupabaseClient, RealtimeChannel,
-  User
+  SupabaseClient,
+  RealtimeChannel,
+  User,
+  AuthResponse,
 } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
@@ -38,7 +40,9 @@ export interface AirQualityData {
 })
 export class SupabaseService {
   private supabase: SupabaseClient;
-  private currentUser = new BehaviorSubject<User | null>(null);
+  private currentUser = new BehaviorSubject<User | null | undefined>(
+    undefined,
+  );
   public currentUser$ = this.currentUser.asObservable();
   private authInitialized = false;
   private realtimeChannel: RealtimeChannel | null = null;
@@ -57,19 +61,7 @@ export class SupabaseService {
           storage: {
             getItem: (key) => {
               try {
-                const value = localStorage.getItem(key);
-                if (!value) return null;
-
-                // Parse the stored value to check if it's expired
-                const parsed = JSON.parse(value);
-                if (
-                  parsed.expires_at &&
-                  parsed.expires_at * 1000 < Date.now()
-                ) {
-                  localStorage.removeItem(key);
-                  return null;
-                }
-                return value;
+                return localStorage.getItem(key);
               } catch (error) {
                 console.warn('Error accessing localStorage:', error);
                 return null;
@@ -131,7 +123,10 @@ export class SupabaseService {
     }
   }
 
-  async signIn(email: string, password: string): Promise<any> {
+  async signIn(
+    email: string,
+    password: string,
+  ): Promise<AuthResponse['data']> {
     try {
       const { data, error } = await this.supabase.auth.signInWithPassword({
         email,
@@ -185,26 +180,59 @@ export class SupabaseService {
     }
   }
 
+  async createRoom(name: string): Promise<Room> {
+    try {
+      const { data, error } = await this.supabase
+        .from('rooms')
+        .insert({ name })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Room;
+    } catch (error) {
+      console.error('Error creating room:', error);
+      throw error;
+    }
+  }
+
+  async createSensor(name: string, roomId: string): Promise<Sensor> {
+    try {
+      const { data, error } = await this.supabase
+        .from('sensors')
+        .insert({ name, room_id: roomId })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Sensor;
+    } catch (error) {
+      console.error('Error creating sensor:', error);
+      throw error;
+    }
+  }
+
   async getAirQualityData(
     sensorId: string,
-    limit = 100,
+    rangeHours = 24,
   ): Promise<AirQualityData[]> {
     try {
+      const since = new Date(
+        Date.now() - rangeHours * 60 * 60 * 1000,
+      ).toISOString();
       const { data, error } = await this.supabase
         .from('air_quality_data')
         .select('*')
         .eq('sensor_id', sensorId)
-        .order('timestamp_received', { ascending: false })
-        .limit(limit);
+        .gte('timestamp_received', since)
+        .order('timestamp_received', { ascending: true });
       if (error) throw error;
-      return data as AirQualityData[];
+      return (data as AirQualityData[]) ?? [];
     } catch (error) {
       console.error('Error fetching air quality data:', error);
       throw error;
     }
   }
 
-  getCurrentUser(): Observable<any> {
+  getCurrentUser(): Observable<User | null | undefined> {
     if (!this.authInitialized) {
       this.initializeAuth();
     }

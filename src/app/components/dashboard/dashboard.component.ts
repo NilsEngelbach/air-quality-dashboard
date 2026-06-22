@@ -7,8 +7,6 @@ import {
   Sensor,
   AirQualityData,
 } from '../../services/supabase.service';
-import { Chart, ChartConfiguration } from 'chart.js';
-import { registerables } from 'chart.js';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,10 +14,20 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { Subscription } from 'rxjs';
-
-Chart.register(...registerables);
+import {
+  CreateNameDialogComponent,
+  CreateNameDialogData,
+} from '../create-name-dialog/create-name-dialog.component';
+import { IaqGaugeComponent } from '../iaq-gauge/iaq-gauge.component';
+import { HistoryChartComponent } from '../history-chart/history-chart.component';
+import {
+  formatMetricValue,
+  METRICS,
+  MetricConfig,
+  MetricKey,
+} from '../../models/metric.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -35,19 +43,27 @@ Chart.register(...registerables);
     MatCardModule,
     MatSelectModule,
     MatIconModule,
-    MatProgressSpinnerModule,
+    MatDialogModule,
+    IaqGaugeComponent,
+    HistoryChartComponent,
   ],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private supabaseService = inject(SupabaseService);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
 
   rooms: Room[] = [];
   sensors: Sensor[] = [];
   selectedRoom: Room | null = null;
   selectedSensor: Sensor | null = null;
   latestData: AirQualityData | null = null;
-  private chart: Chart | null = null;
+  chartData: AirQualityData[] = [];
+  rangeHours = 24;
+
+  readonly metrics: MetricConfig[] = METRICS;
+  readonly formatMetricValue = formatMetricValue;
+
   private updateSubscription: Subscription | null = null;
 
   async ngOnInit() {
@@ -66,8 +82,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedRoom = room;
     this.selectedSensor = null;
     this.latestData = null;
-    this.chart?.destroy();
-    this.chart = null;
+    this.chartData = [];
 
     try {
       this.sensors = await this.supabaseService.getSensors(room.id);
@@ -80,8 +95,93 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  openCreateRoomDialog(): void {
+    const dialogRef = this.dialog.open(CreateNameDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Create Room',
+        label: 'Room name',
+      } as CreateNameDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((name: string | undefined) => {
+      if (name) {
+        this.createRoom(name);
+      }
+    });
+  }
+
+  async createRoom(name: string): Promise<void> {
+    try {
+      const room = await this.supabaseService.createRoom(name);
+      this.rooms = [room, ...this.rooms];
+      await this.selectRoom(room);
+    } catch (error) {
+      console.error('Error creating room:', error);
+    }
+  }
+
+  openCreateSensorDialog(): void {
+    if (!this.selectedRoom) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(CreateNameDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Create Air-Checker',
+        label: 'Sensor name',
+      } as CreateNameDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((name: string | undefined) => {
+      if (name) {
+        this.createSensor(name);
+      }
+    });
+  }
+
+  async createSensor(name: string): Promise<void> {
+    if (!this.selectedRoom) {
+      return;
+    }
+
+    try {
+      const sensor = await this.supabaseService.createSensor(
+        name,
+        this.selectedRoom.id,
+      );
+      this.sensors = [sensor, ...this.sensors];
+      this.selectedSensor = sensor;
+      await this.onSensorChange();
+    } catch (error) {
+      console.error('Error creating sensor:', error);
+    }
+  }
+
+  async copySensorId(): Promise<void> {
+    if (!this.selectedSensor) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(this.selectedSensor.id);
+    } catch (error) {
+      console.error('Error copying sensor id:', error);
+    }
+  }
+
+  async onRangeChange(hours: number) {
+    this.rangeHours = hours;
+    if (this.selectedSensor) {
+      await this.loadSensorData();
+    }
+  }
+
   async onSensorChange() {
-    if (!this.selectedSensor) return;
+    if (!this.selectedSensor) {
+      return;
+    }
 
     if (this.updateSubscription) {
       this.updateSubscription.unsubscribe();
@@ -89,103 +189,52 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const data = await this.supabaseService.getAirQualityData(
-        this.selectedSensor.id,
-      );
-
-      if (data.length > 0) {
-        this.latestData = data[0];
-        this.updateChart(data);
-      }
+      await this.loadSensorData();
 
       this.updateSubscription = this.supabaseService
         .subscribeToAirQualityUpdates(this.selectedSensor.id)
         .subscribe((newData) => {
           console.log('Received new air quality data:', newData);
           this.latestData = newData;
-
-          if (this.chart) {
-            const chartData = this.chart.data;
-            const labels = chartData.labels as string[];
-            const datasets = chartData.datasets;
-
-            labels.push(
-              new Date(newData.timestamp_received).toLocaleTimeString(),
-            );
-            datasets.forEach((dataset) => {
-              const data = dataset.data as number[];
-              switch (dataset.label) {
-                case 'Temperature (°C)':
-                  data.push(newData.temperature);
-                  break;
-                case 'Humidity (%)':
-                  data.push(newData.humidity);
-                  break;
-                default:
-                  break;
-              }
-            });
-
-            if (labels.length > 20) {
-              labels.shift();
-              datasets.forEach((dataset) => {
-                (dataset.data as number[]).shift();
-              });
-            }
-
-            this.chart.update();
-          }
+          this.appendRealtimeData(newData);
         });
     } catch (error) {
       console.error('Error loading sensor data:', error);
     }
   }
 
-  private updateChart(data: AirQualityData[]) {
-    const ctx = document.querySelector('canvas')?.getContext('2d');
-    if (!ctx) return;
-
-    const timestamps = data
-      .map((d) => new Date(d.timestamp_received).toLocaleTimeString())
-      .reverse();
-    const temperatures = data.map((d) => d.temperature).reverse();
-    const humidities = data.map((d) => d.humidity).reverse();
-
-    if (this.chart) {
-      this.chart.destroy();
+  private async loadSensorData() {
+    if (!this.selectedSensor) {
+      return;
     }
 
-    const config: ChartConfiguration = {
-      type: 'line',
-      data: {
-        labels: timestamps,
-        datasets: [
-          {
-            label: 'Temperature (°C)',
-            data: temperatures,
-            borderColor: 'rgb(255, 99, 132)',
-            tension: 0.1,
-          },
-          {
-            label: 'Humidity (%)',
-            data: humidities,
-            borderColor: 'rgb(54, 162, 235)',
-            tension: 0.1,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: false,
-          },
-        },
-      },
-    };
+    try {
+      const data = await this.supabaseService.getAirQualityData(
+        this.selectedSensor.id,
+        this.rangeHours,
+      );
 
-    this.chart = new Chart(ctx, config);
+      this.chartData = data;
+      if (data.length > 0) {
+        this.latestData = data[data.length - 1];
+      }
+    } catch (error) {
+      console.error('Error loading sensor data:', error);
+    }
+  }
+
+  private appendRealtimeData(newData: AirQualityData) {
+    const cutoff = new Date(
+      Date.now() - this.rangeHours * 60 * 60 * 1000,
+    );
+    const filtered = this.chartData.filter(
+      (d) => new Date(d.timestamp_received) >= cutoff,
+    );
+    this.chartData = [...filtered, newData];
+  }
+
+  getMetricValue(data: AirQualityData | null, key: MetricKey): number | undefined {
+    return data?.[key];
   }
 
   async logout() {

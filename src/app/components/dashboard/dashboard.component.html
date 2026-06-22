@@ -1,15 +1,28 @@
 <mat-sidenav-container class="sidenav-container">
   <mat-sidenav #drawer class="sidenav" fixedInViewport mode="side" opened>
-    <mat-toolbar>Rooms</mat-toolbar>
+    <mat-toolbar class="sidenav-toolbar">
+      <span>Rooms</span>
+      <span class="toolbar-spacer"></span>
+      <button
+        mat-icon-button
+        (click)="openCreateRoomDialog()"
+        aria-label="Create room"
+        title="Create room"
+      >
+        <mat-icon>add</mat-icon>
+      </button>
+    </mat-toolbar>
     <mat-nav-list>
-      <a
+      <button
         mat-list-item
+        type="button"
         *ngFor="let room of rooms"
         (click)="selectRoom(room)"
         [class.active]="selectedRoom?.id === room.id"
       >
-        {{ room.name }}
-      </a>
+        <mat-icon matListItemIcon>meeting_room</mat-icon>
+        <span matListItemTitle>{{ room.name }}</span>
+      </button>
     </mat-nav-list>
   </mat-sidenav>
 
@@ -26,77 +39,83 @@
     </mat-toolbar>
 
     <div class="content-container" *ngIf="selectedRoom">
-      <mat-form-field appearance="outline" class="sensor-select">
-        <mat-label>Select Sensor</mat-label>
-        <mat-select
-          [(value)]="selectedSensor"
-          (selectionChange)="onSensorChange()"
+      <div class="sensor-select-row">
+        <mat-form-field appearance="outline" class="sensor-select">
+          <mat-label>Select Air-Checker</mat-label>
+          <mat-select
+            [(value)]="selectedSensor"
+            (selectionChange)="onSensorChange()"
+          >
+            <mat-option *ngFor="let sensor of sensors" [value]="sensor">
+              {{ sensor.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button
+          mat-icon-button
+          color="primary"
+          (click)="openCreateSensorDialog()"
+          aria-label="Create air-checker"
+          title="Create air-checker"
         >
-          <mat-option *ngFor="let sensor of sensors" [value]="sensor">
-            {{ sensor.name }}
-          </mat-option>
-        </mat-select>
-      </mat-form-field>
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      <mat-card class="sensor-id-card" *ngIf="selectedSensor">
+        <mat-card-content>
+          <div class="sensor-id-row">
+            <div class="sensor-id-text">
+              <span class="sensor-id-label">Sensor ID</span>
+              <code>{{ selectedSensor.id }}</code>
+            </div>
+            <button
+              mat-icon-button
+              (click)="copySensorId()"
+              aria-label="Copy sensor ID"
+              title="Copy sensor ID"
+            >
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <app-iaq-gauge
+        *ngIf="selectedSensor"
+        class="gauge-section"
+        [iaq]="latestData?.iaq"
+        [accuracy]="latestData?.accuracy"
+        [lastUpdated]="latestData?.timestamp_received"
+      ></app-iaq-gauge>
 
       <div class="metrics-grid" *ngIf="selectedSensor">
-        <mat-card class="metric-card">
-          <mat-card-title>Temperature</mat-card-title>
+        <mat-card
+          class="metric-card"
+          *ngFor="let metric of metrics"
+        >
+          <mat-card-title>
+            <span
+              class="metric-dot"
+              [style.background-color]="metric.color"
+            ></span>
+            {{ metric.label }}
+          </mat-card-title>
           <mat-card-content>
             <div class="metric-value">
-              {{ latestData?.temperature | number: "1.1-1" }}°C
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="metric-card">
-          <mat-card-title>Humidity</mat-card-title>
-          <mat-card-content>
-            <div class="metric-value">
-              {{ latestData?.humidity | number: "1.1-1" }}%
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="metric-card">
-          <mat-card-title>Pressure</mat-card-title>
-          <mat-card-content>
-            <div class="metric-value">
-              {{ latestData?.pressure | number: "1.0-0" }} hPa
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="metric-card">
-          <mat-card-title>CO2</mat-card-title>
-          <mat-card-content>
-            <div class="metric-value">
-              {{ latestData?.co2 | number: "1.0-0" }} ppm
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="metric-card">
-          <mat-card-title>VOC</mat-card-title>
-          <mat-card-content>
-            <div class="metric-value">
-              {{ latestData?.voc | number: "1.0-0" }} ppb
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card class="metric-card">
-          <mat-card-title>IAQ</mat-card-title>
-          <mat-card-content>
-            <div class="metric-value">
-              {{ latestData?.iaq | number: "1.0-0" }}
+              {{ formatMetricValue(getMetricValue(latestData, metric.key), metric) }}
             </div>
           </mat-card-content>
         </mat-card>
       </div>
 
-      <div class="chart-container" *ngIf="selectedSensor">
-        <canvas #chartCanvas></canvas>
-      </div>
+      <app-history-chart
+        *ngIf="selectedSensor"
+        class="chart-section"
+        [data]="chartData"
+        [rangeHours]="rangeHours"
+        (rangeHoursChange)="onRangeChange($event)"
+      ></app-history-chart>
     </div>
 
     <div class="no-selection" *ngIf="!selectedRoom">

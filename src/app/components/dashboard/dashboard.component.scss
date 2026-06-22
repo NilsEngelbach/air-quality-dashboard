@@ -4,6 +4,20 @@
 
 .sidenav {
   width: 250px;
+
+  ::ng-deep mat-nav-list {
+    .mdc-list-item__start {
+      margin-inline-end: 12px;
+    }
+
+    .mdc-list-item__content {
+      text-align: start;
+    }
+  }
+}
+
+.sidenav-toolbar {
+  padding-right: 8px;
 }
 
 .toolbar-spacer {
@@ -14,30 +28,86 @@
   padding: 20px;
 }
 
+.sensor-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
 .sensor-select {
   width: 300px;
+  margin-bottom: 0;
+}
+
+.sensor-id-card {
+  margin-bottom: 20px;
+}
+
+.sensor-id-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sensor-id-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sensor-id-label {
+  font-size: 12px;
+  color: #666;
+}
+
+.sensor-id-text code {
+  font-family: monospace;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.gauge-section {
+  display: block;
   margin-bottom: 20px;
 }
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
   margin-bottom: 20px;
 }
 
 .metric-card {
   text-align: center;
+
+  mat-card-title {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1rem;
+  }
+}
+
+.metric-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
 .metric-value {
   font-size: 24px;
   font-weight: bold;
-  margin: 10px 0;
+  margin: 10px 0 0;
 }
 
-.chart-container {
-  height: 400px;
+.chart-section {
+  display: block;
   margin-top: 20px;
 }
 
@@ -51,4 +121,19 @@
 
 .active {
   background-color: rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 600px) {
+  .content-container {
+    padding: 12px;
+  }
+
+  .sensor-select {
+    width: 100%;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
 }

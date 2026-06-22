@@ -72,14 +72,15 @@ export class LoginComponent implements OnInit {
     const { email, password } = this.loginForm.value;
 
     try {
-      const { error } = await this.supabaseService.signIn(email, password);
-      if (error) throw error;
+      await this.supabaseService.signIn(email, password);
 
       console.log('Login successful, redirecting to dashboard...');
       this.router.navigate(['/dashboard']);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      this.errorMessage = error.message || 'An error occurred during login';
+      this.errorMessage =
+        (error instanceof Error ? error.message : null) ||
+        'An error occurred during login';
     } finally {
       this.loading = false;
     }

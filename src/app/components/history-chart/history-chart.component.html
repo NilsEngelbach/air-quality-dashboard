@@ -1,0 +1,42 @@
+<mat-card class="history-card">
+  <mat-card-header class="history-header">
+    <mat-card-title>History</mat-card-title>
+    <div class="range-selector">
+      <button
+        mat-button
+        *ngFor="let range of timeRanges"
+        [color]="rangeHours === range.value ? 'primary' : ''"
+        [disabled]="rangeHours === range.value"
+        (click)="onRangeChange(range.value)"
+      >
+        {{ range.label }}
+      </button>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div
+      class="chart-wrapper"
+      (mousemove)="onMouseMove($event)"
+      (mouseleave)="onMouseLeave()"
+    >
+      <div #chartDiv class="chart-plot"></div>
+      <div class="chart-overlay" *ngIf="hoverX !== null">
+        <div class="crosshair" [style.left.px]="hoverX"></div>
+        <div class="hover-values">
+          <div
+            class="hover-value"
+            *ngFor="let item of hoverValues"
+          >
+            <span
+              class="metric-dot"
+              [style.background-color]="item.color"
+            ></span>
+            <span class="hover-label">{{ item.label }}</span>
+            <span class="hover-value-text">{{ item.value }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>
