@@ -7,6 +7,11 @@ import {
   Sensor,
   AirQualityData,
 } from '../../services/supabase.service';
+import { IaqAlertService } from '../../services/iaq-alert.service';
+import {
+  NotificationService,
+  NotificationPayload,
+} from '../../services/notification.service';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +20,9 @@ import { MatListModule } from '@angular/material/list';
 import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
 import {
   CreateNameDialogComponent,
@@ -44,6 +52,9 @@ import {
     MatSelectModule,
     MatIconModule,
     MatDialogModule,
+    MatSnackBarModule,
+    MatSlideToggleModule,
+    MatTooltipModule,
     IaqGaugeComponent,
     HistoryChartComponent,
   ],
@@ -52,6 +63,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private supabaseService = inject(SupabaseService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private iaqAlertService = inject(IaqAlertService);
+  private notificationService = inject(NotificationService);
 
   rooms: Room[] = [];
   sensors: Sensor[] = [];
@@ -64,9 +77,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly metrics: MetricConfig[] = METRICS;
   readonly formatMetricValue = formatMetricValue;
 
+  notificationsEnabled = false;
+  notificationsUnsupported = false;
+
   private updateSubscription: Subscription | null = null;
 
   async ngOnInit() {
+    this.notificationsEnabled = this.notificationService.areNotificationsEnabled();
+    this.notificationsUnsupported = !this.notificationService.isBrowserApiSupported();
     await this.loadRooms();
   }
 
@@ -190,6 +208,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     try {
       await this.loadSensorData();
+      this.iaqAlertService.reset(this.selectedSensor.id);
 
       this.updateSubscription = this.supabaseService
         .subscribeToAirQualityUpdates(this.selectedSensor.id)
@@ -197,6 +216,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           console.log('Received new air quality data:', newData);
           this.latestData = newData;
           this.appendRealtimeData(newData);
+          this.handleIaqAlert(newData);
         });
     } catch (error) {
       console.error('Error loading sensor data:', error);
@@ -233,8 +253,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.chartData = [...filtered, newData];
   }
 
+  private handleIaqAlert(newData: AirQualityData): void {
+    const result = this.iaqAlertService.evaluate(
+      newData,
+      this.selectedRoom?.name,
+      this.selectedSensor?.name,
+    );
+
+    if (!result.shouldAlert) {
+      return;
+    }
+
+    const location = [result.roomName, result.sensorName]
+      .filter(Boolean)
+      .join(' – ');
+
+    const payload: NotificationPayload = {
+      title: 'Air quality alert',
+      body: location
+        ? `IAQ is ${result.band} (${result.iaq}) in ${location}.`
+        : `IAQ is ${result.band} (${result.iaq}).`,
+      tag: `iaq-alert-${result.sensorId}`,
+    };
+
+    this.notificationService.show(payload);
+  }
+
   getMetricValue(data: AirQualityData | null, key: MetricKey): number | undefined {
     return data?.[key];
+  }
+
+  async toggleNotifications(enabled: boolean): Promise<void> {
+    if (enabled) {
+      const granted = await this.notificationService.enableNotifications();
+      this.notificationsEnabled = granted;
+    } else {
+      this.notificationService.disableNotifications();
+      this.notificationsEnabled = false;
+    }
   }
 
   async logout() {

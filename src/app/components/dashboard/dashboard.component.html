@@ -33,6 +33,15 @@
       </button>
       <span>Air Quality Dashboard</span>
       <span class="toolbar-spacer"></span>
+      <mat-slide-toggle
+        class="notification-toggle"
+        [checked]="notificationsEnabled"
+        (change)="toggleNotifications($event.checked)"
+        [disabled]="notificationsUnsupported"
+        [matTooltip]="notificationsUnsupported ? 'Browser notifications are not supported' : 'Notify me when air quality gets bad'"
+      >
+        <span class="notification-toggle-label">Alerts</span>
+      </mat-slide-toggle>
       <button mat-icon-button (click)="logout()">
         <mat-icon>logout</mat-icon>
       </button>
@@ -40,7 +49,7 @@
 
     <div class="content-container" *ngIf="selectedRoom">
       <div class="sensor-select-row">
-        <mat-form-field appearance="outline" class="sensor-select">
+        <mat-form-field appearance="outline" class="sensor-select" [subscriptSizing]="'dynamic'">
           <mat-label>Select Air-Checker</mat-label>
           <mat-select
             [(value)]="selectedSensor"

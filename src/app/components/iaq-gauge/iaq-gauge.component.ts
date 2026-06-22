@@ -97,7 +97,7 @@ export class IaqGaugeComponent
             tickvals: IAQ_BANDS.map((b) => (b.min + b.max) / 2),
             ticktext: IAQ_BANDS.map((b) => b.label),
           },
-          bar: { color: band.color, thickness: 0.75 },
+          bar: { color: this.darkenColor(band.color, 0.35), thickness: 0.75 },
           bgcolor: 'transparent',
           borderwidth: 0,
           steps: IAQ_BANDS.map((b) => ({
@@ -132,5 +132,23 @@ export class IaqGaugeComponent
     if (this.gaugeDiv?.nativeElement) {
       Plotly.Plots.resize(this.gaugeDiv.nativeElement);
     }
+  }
+
+  private darkenColor(color: string, amount: number): string {
+    const hex = color.replace('#', '');
+    if (hex.length !== 3 && hex.length !== 6) {
+      return color;
+    }
+    const pieces =
+      hex.length === 3
+        ? hex.split('').map((c) => c + c)
+        : [hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)];
+    const [r, g, b] = pieces.map((piece) => {
+      const value = parseInt(piece, 16);
+      return Math.max(0, Math.round(value * (1 - amount)))
+        .toString(16)
+        .padStart(2, '0');
+    });
+    return `#${r}${g}${b}`;
   }
 }

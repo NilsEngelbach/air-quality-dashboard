@@ -24,6 +24,16 @@
   flex: 1 1 auto;
 }
 
+.notification-toggle {
+  margin-right: 8px;
+  font-size: 14px;
+
+  .notification-toggle-label {
+    margin-left: 8px;
+    color: white;
+  }
+}
+
 .content-container {
   padding: 20px;
 }
