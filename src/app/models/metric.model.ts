@@ -14,6 +14,8 @@ export interface MetricConfig {
   yAxis: 'y' | 'y2' | 'y3' | 'y4' | 'y5';
   min: number;
   max: number;
+  outdoorMin?: number;
+  outdoorMax?: number;
   decimals: number;
   visibleByDefault: boolean;
 }
@@ -25,8 +27,10 @@ export const METRICS: MetricConfig[] = [
     unit: '°C',
     color: '#ff7f0e',
     yAxis: 'y',
-    min: 0,
-    max: 40,
+    min: 15,
+    max: 30,
+    outdoorMin: -20,
+    outdoorMax: 40,
     decimals: 1,
     visibleByDefault: true,
   },
@@ -80,8 +84,8 @@ export const METRICS: MetricConfig[] = [
     unit: 'hPa',
     color: '#8c564b',
     yAxis: 'y5',
-    min: 980,
-    max: 1040,
+    min: 950,
+    max: 1050,
     decimals: 0,
     visibleByDefault: false,
   },
@@ -93,13 +97,13 @@ export const IAQ_BANDS: {
   label: string;
   color: string;
 }[] = [
-  { min: 0, max: 50, label: 'Excellent', color: '#2ecc71' },
-  { min: 51, max: 100, label: 'Good', color: '#f1c40f' },
-  { min: 101, max: 150, label: 'Light', color: '#f39c12' },
-  { min: 151, max: 200, label: 'Moderate', color: '#e67e22' },
-  { min: 201, max: 250, label: 'Heavy', color: '#e74c3c' },
-  { min: 251, max: 350, label: 'Severe', color: '#9b59b6' },
-  { min: 351, max: 500, label: 'Extreme', color: '#6c3483' },
+  { min: 0, max: 50, label: 'Excellent', color: '#145a32' },
+  { min: 51, max: 100, label: 'Good', color: '#2ecc71' },
+  { min: 101, max: 150, label: 'Light', color: '#f1c40f' },
+  { min: 151, max: 200, label: 'Moderate', color: '#f39c12' },
+  { min: 201, max: 250, label: 'Heavy', color: '#e67e22' },
+  { min: 251, max: 350, label: 'Severe', color: '#e74c3c' },
+  { min: 351, max: 500, label: 'Extreme', color: '#9b59b6' },
 ];
 
 export function getIaqBand(iaq: number): {

@@ -11,6 +11,12 @@
       >
         {{ range.label }}
       </button>
+      <mat-slide-toggle
+        [checked]="outdoor"
+        (change)="onOutdoorToggle($event.checked)"
+      >
+        Outdoor
+      </mat-slide-toggle>
     </div>
   </mat-card-header>
 

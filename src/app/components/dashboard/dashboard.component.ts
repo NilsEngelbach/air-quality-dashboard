@@ -91,6 +91,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   async loadRooms() {
     try {
       this.rooms = await this.supabaseService.getRooms();
+      if (this.rooms.length > 0 && !this.selectedRoom) {
+        await this.selectRoom(this.rooms[0]);
+      }
     } catch (error) {
       console.error('Error loading rooms:', error);
     }

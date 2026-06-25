@@ -1,5 +1,5 @@
 <mat-sidenav-container class="sidenav-container">
-  <mat-sidenav #drawer class="sidenav" fixedInViewport mode="side" opened>
+  <mat-sidenav #drawer class="sidenav" fixedInViewport mode="side">
     <mat-toolbar class="sidenav-toolbar">
       <span>Rooms</span>
       <span class="toolbar-spacer"></span>
@@ -34,11 +34,11 @@
       <span>Air Quality Dashboard</span>
       <span class="toolbar-spacer"></span>
       <mat-slide-toggle
+        *ngIf="!notificationsUnsupported"
         class="notification-toggle"
         [checked]="notificationsEnabled"
         (change)="toggleNotifications($event.checked)"
-        [disabled]="notificationsUnsupported"
-        [matTooltip]="notificationsUnsupported ? 'Browser notifications are not supported' : 'Notify me when air quality gets bad'"
+        [matTooltip]="'Notify me when air quality gets bad'"
       >
         <span class="notification-toggle-label">Alerts</span>
       </mat-slide-toggle>
