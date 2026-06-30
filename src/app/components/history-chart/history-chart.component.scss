@@ -27,6 +27,20 @@
   flex-wrap: wrap;
 }
 
+.range-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.range-toggles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .chart-wrapper {
   position: relative;
   width: 100%;
@@ -95,7 +109,19 @@
 @media (max-width: 600px) {
   .history-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+
+  .range-selector {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .range-buttons,
+  .range-toggles {
+    justify-content: space-between;
+    width: 100%;
   }
 
   .history-card mat-card-content {

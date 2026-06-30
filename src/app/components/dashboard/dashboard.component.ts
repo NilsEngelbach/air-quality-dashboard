@@ -6,6 +6,7 @@ import {
   Room,
   Sensor,
   AirQualityData,
+  AggregatedAirQuality,
 } from '../../services/supabase.service';
 import { IaqAlertService } from '../../services/iaq-alert.service';
 import {
@@ -73,6 +74,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   latestData: AirQualityData | null = null;
   chartData: AirQualityData[] = [];
   rangeHours = 24;
+  calibratedOnly = true;
 
   readonly metrics: MetricConfig[] = METRICS;
   readonly formatMetricValue = formatMetricValue;
@@ -199,6 +201,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onCalibratedOnlyChange(calibratedOnly: boolean) {
+    this.calibratedOnly = calibratedOnly;
+    if (this.selectedSensor) {
+      await this.loadSensorData();
+    }
+  }
+
   async onSensorChange() {
     if (!this.selectedSensor) {
       return;
@@ -232,10 +241,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const data = await this.supabaseService.getAirQualityData(
-        this.selectedSensor.id,
-        this.rangeHours,
-      );
+      const data =
+        this.rangeHours <= 6
+          ? await this.supabaseService.getAirQualityData(
+              this.selectedSensor.id,
+              this.rangeHours,
+            )
+          : this.toChartData(
+              await this.supabaseService.getAggregatedAirQualityData(
+                this.selectedSensor.id,
+                this.rangeHours,
+                this.bucketSecondsFor(this.rangeHours),
+                this.calibratedOnly ? 3 : 0,
+              ),
+              this.selectedSensor.id,
+            );
 
       this.chartData = data;
       if (data.length > 0) {
@@ -246,6 +266,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  private bucketSecondsFor(rangeHours: number): number {
+    if (rangeHours <= 6) return 60;
+    if (rangeHours <= 24) return 300;
+    return 1800;
+  }
+
+  private toChartData(
+    rows: AggregatedAirQuality[],
+    sensorId: string,
+  ): AirQualityData[] {
+    return rows.map((r) => ({
+      id: `agg-${r.bucket}`,
+      sensor_id: sensorId,
+      timestamp_received: r.bucket,
+      temperature: r.temperature,
+      humidity: r.humidity,
+      pressure: r.pressure,
+      voc: r.voc,
+      co2: r.co2,
+      iaq: r.iaq,
+      accuracy: r.accuracy,
+    }));
+  }
+
   private appendRealtimeData(newData: AirQualityData) {
     const cutoff = new Date(
       Date.now() - this.rangeHours * 60 * 60 * 1000,
@@ -253,7 +297,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const filtered = this.chartData.filter(
       (d) => new Date(d.timestamp_received) >= cutoff,
     );
-    this.chartData = [...filtered, newData];
+    // In aggregated mode the chart shows buckets; a single new reading should
+    // not appear as a sparse point. Re-aggregate by reloading on next change.
+    this.chartData =
+      this.rangeHours <= 6
+        ? [...filtered, newData]
+        : filtered;
+    if (this.rangeHours > 6) {
+      this.loadSensorData();
+    }
   }
 
   private handleIaqAlert(newData: AirQualityData): void {

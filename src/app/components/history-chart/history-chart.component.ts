@@ -78,6 +78,8 @@ export class HistoryChartComponent
   @Output() rangeHoursChange = new EventEmitter<number>();
 
   outdoor = false;
+  @Input() calibratedOnly = true;
+  @Output() calibratedOnlyChange = new EventEmitter<boolean>();
 
   readonly timeRanges: TimeRangeOption[] = [
     { label: '1h', value: 1 },
@@ -133,12 +135,27 @@ export class HistoryChartComponent
     }
   }
 
+  onCalibratedOnlyToggle(calibratedOnly: boolean) {
+    if (calibratedOnly !== this.calibratedOnly) {
+      this.calibratedOnly = calibratedOnly;
+      this.calibratedOnlyChange.emit(calibratedOnly);
+      this.draw();
+    }
+  }
+
+  private getVisibleData(): AirQualityData[] {
+    return this.calibratedOnly
+      ? this.data.filter((d) => d.accuracy >= 3)
+      : this.data;
+  }
+
   private draw() {
     if (!this.chartDiv) {
       return;
     }
 
-    const timestamps = this.data.map(
+    const visible = this.getVisibleData();
+    const timestamps = visible.map(
       (d) => new Date(d.timestamp_received),
     );
 
@@ -168,7 +185,7 @@ export class HistoryChartComponent
     xaxis: string,
     yaxis: string,
   ): Plotly.Data {
-    const values = this.data.map((d) => d[metric.key]);
+    const values = this.getVisibleData().map((d) => d[metric.key]);
     return {
       x: timestamps,
       y: values,
@@ -327,7 +344,8 @@ export class HistoryChartComponent
   }
 
   onMouseMove(event: MouseEvent) {
-    if (this.data.length === 0) {
+    const visible = this.getVisibleData();
+    if (visible.length === 0) {
       return;
     }
 
@@ -344,9 +362,9 @@ export class HistoryChartComponent
           )
         : 0;
 
-    const start = new Date(this.data[0].timestamp_received).getTime();
+    const start = new Date(visible[0].timestamp_received).getTime();
     const end = new Date(
-      this.data[this.data.length - 1].timestamp_received,
+      visible[visible.length - 1].timestamp_received,
     ).getTime();
     const targetTime = start + ratio * (end - start);
     const pointNumber = this.findNearestIndexByTime(targetTime);
@@ -360,11 +378,12 @@ export class HistoryChartComponent
   }
 
   private findNearestIndexByTime(targetTime: number): number {
+    const visible = this.getVisibleData();
     let best = 0;
     let bestDiff = Infinity;
-    for (let i = 0; i < this.data.length; i++) {
+    for (let i = 0; i < visible.length; i++) {
       const diff = Math.abs(
-        new Date(this.data[i].timestamp_received).getTime() - targetTime,
+        new Date(visible[i].timestamp_received).getTime() - targetTime,
       );
       if (diff < bestDiff) {
         bestDiff = diff;
@@ -375,7 +394,8 @@ export class HistoryChartComponent
   }
 
   private buildHoverValues(pointNumber: number): HoverValue[] {
-    const row = this.data[pointNumber];
+    const visible = this.getVisibleData();
+    const row = visible[pointNumber];
     return CHART_ROWS.map((chartRow) => ({
       label: chartRow.metric.label,
       value: formatMetricValue(row[chartRow.metric.key], chartRow.metric),

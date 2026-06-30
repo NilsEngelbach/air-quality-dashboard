@@ -35,6 +35,18 @@ export interface AirQualityData {
   accuracy: number;
 }
 
+export interface AggregatedAirQuality {
+  bucket: string;
+  temperature: number;
+  humidity: number;
+  pressure: number;
+  voc: number;
+  co2: number;
+  iaq: number;
+  accuracy: number;
+  sample_count: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -228,6 +240,33 @@ export class SupabaseService {
       return (data as AirQualityData[]) ?? [];
     } catch (error) {
       console.error('Error fetching air quality data:', error);
+      throw error;
+    }
+  }
+
+  async getAggregatedAirQualityData(
+    sensorId: string,
+    rangeHours: number,
+    bucketSeconds: number,
+    minAccuracy = 0,
+  ): Promise<AggregatedAirQuality[]> {
+    try {
+      const since = new Date(
+        Date.now() - rangeHours * 60 * 60 * 1000,
+      ).toISOString();
+      const { data, error } = await this.supabase.rpc(
+        'get_aggregated_air_quality',
+        {
+          p_sensor_id: sensorId,
+          p_since: since,
+          p_bucket_seconds: bucketSeconds,
+          p_min_accuracy: minAccuracy,
+        },
+      );
+      if (error) throw error;
+      return (data as AggregatedAirQuality[]) ?? [];
+    } catch (error) {
+      console.error('Error fetching aggregated air quality data:', error);
       throw error;
     }
   }

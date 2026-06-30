@@ -2,21 +2,31 @@
   <mat-card-header class="history-header">
     <mat-card-title>History</mat-card-title>
     <div class="range-selector">
-      <button
-        mat-button
-        *ngFor="let range of timeRanges"
-        [color]="rangeHours === range.value ? 'primary' : ''"
-        [disabled]="rangeHours === range.value"
-        (click)="onRangeChange(range.value)"
-      >
-        {{ range.label }}
-      </button>
-      <mat-slide-toggle
-        [checked]="outdoor"
-        (change)="onOutdoorToggle($event.checked)"
-      >
-        Outdoor
-      </mat-slide-toggle>
+      <div class="range-buttons">
+        <button
+          mat-button
+          *ngFor="let range of timeRanges"
+          [color]="rangeHours === range.value ? 'primary' : ''"
+          [disabled]="rangeHours === range.value"
+          (click)="onRangeChange(range.value)"
+        >
+          {{ range.label }}
+        </button>
+      </div>
+      <div class="range-toggles">
+        <mat-slide-toggle
+          [checked]="outdoor"
+          (change)="onOutdoorToggle($event.checked)"
+        >
+          Outdoor
+        </mat-slide-toggle>
+        <mat-slide-toggle
+          [checked]="calibratedOnly"
+          (change)="onCalibratedOnlyToggle($event.checked)"
+        >
+          Calibrated only
+        </mat-slide-toggle>
+      </div>
     </div>
   </mat-card-header>
 
